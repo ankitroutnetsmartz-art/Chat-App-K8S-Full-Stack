@@ -1,45 +1,143 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>KubeChat-K8S-Fullstack</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K8S Pro Chat | Secure</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { font-family: sans-serif; margin: 0; padding: 20px; background: #e5ddd5; }
-        #chat-container { max-width: 500px; margin: auto; background: white; height: 80vh; display: flex; flex-direction: column; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        #messages { list-style: none; margin: 0; padding: 20px; flex-grow: 1; overflow-y: auto; }
-        #messages li { padding: 10px; background: #dcf8c6; margin-bottom: 10px; border-radius: 5px; width: fit-content; }
-        #form { display: flex; padding: 10px; border-top: 1px solid #ddd; }
-        #input { flex-grow: 1; border: 1px solid #ddd; padding: 10px; border-radius: 5px; outline: none; }
-        button { background: #128c7e; color: white; border: none; padding: 10px 20px; margin-left: 5px; border-radius: 5px; cursor: pointer; }
+        body { background: #0f172a; }
+        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .chat-wallpaper { 
+            background-image: url('https://w0.peakpx.com/wallpaper/508/606/HD-wallpaper-whatsapp-dark-background-whatsapp-dark-mode.jpg');
+            background-size: cover;
+            background-blend-mode: overlay;
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
     </style>
 </head>
-<body>
-    <div id="chat-container">
-        <ul id="messages"></ul>
-        <form id="form">
-            <input id="input" autocomplete="off" placeholder="Type a message..." /><button>Send</button>
-        </form>
+<body class="h-screen text-slate-200 overflow-hidden">
+
+    <div id="profile-section" class="flex items-center justify-center h-full p-6">
+        <div class="glass p-8 rounded-3xl w-full max-w-md shadow-2xl">
+            <div class="text-center mb-8">
+                <i class="fas fa-user-shield text-5xl text-blue-500 mb-4"></i>
+                <h2 class="text-3xl font-bold">User Profiles</h2>
+                <p class="text-slate-400">Select or create a user to start</p>
+            </div>
+            
+            <div id="user-list" class="space-y-3 mb-6 max-h-60 overflow-y-auto custom-scrollbar">
+                </div>
+
+            <div class="flex gap-2">
+                <input id="new-username" class="flex-grow bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="New Username...">
+                <button onclick="addUser()" class="bg-emerald-600 hover:bg-emerald-500 p-3 rounded-xl transition-all">
+                    <i class="fas fa-user-plus"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="chat-section" class="hidden flex flex-col h-full">
+        <header class="p-4 glass flex justify-between items-center z-10">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold" id="current-avatar">?</div>
+                <div>
+                    <h1 class="font-bold" id="current-display-name">Username</h1>
+                    <p class="text-xs text-emerald-400">● Online</p>
+                </div>
+            </div>
+            <button onclick="location.reload()" class="text-slate-400 hover:text-white transition-colors">
+                <i class="fas fa-sign-out-alt text-xl"></i>
+            </button>
+        </header>
+
+        <main id="messages" class="flex-grow p-6 space-y-4 overflow-y-auto chat-wallpaper custom-scrollbar">
+            </main>
+
+        <footer class="p-4 glass">
+            <form id="form" class="max-w-5xl mx-auto flex gap-3">
+                <input id="input" autocomplete="off" class="flex-grow bg-slate-800/80 border border-slate-700 rounded-2xl px-6 py-4 outline-none focus:ring-2 focus:ring-blue-500" placeholder="Type a message...">
+                <button class="bg-blue-600 hover:bg-blue-500 p-4 rounded-2xl shadow-lg transition-transform active:scale-95">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </form>
+        </footer>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        var socket = io();
-        var form = document.getElementById('form');
-        var input = document.getElementById('input');
+        const socket = io();
+        let currentUser = null;
+        let users = JSON.parse(localStorage.getItem('k8s_users') || '[]');
 
-        form.addEventListener('submit', function(e) {
+        function renderUsers() {
+            const list = document.getElementById('user-list');
+            list.innerHTML = users.map(u => `
+                <div class="flex items-center justify-between bg-slate-800/50 p-3 rounded-xl border border-slate-700/50 hover:bg-slate-700/50 transition-all cursor-pointer">
+                    <div class="flex items-center gap-3" onclick="login('${u}')">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-xs font-bold">${u[0].toUpperCase()}</div>
+                        <span>${u}</span>
+                    </div>
+                    <button onclick="deleteUser('${u}')" class="text-slate-500 hover:text-red-400 p-2">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function addUser() {
+            const name = document.getElementById('new-username').value.trim();
+            if (name && !users.includes(name)) {
+                users.push(name);
+                localStorage.setItem('k8s_users', JSON.stringify(users));
+                document.getElementById('new-username').value = '';
+                renderUsers();
+            }
+        }
+
+        function deleteUser(name) {
+            users = users.filter(u => u !== name);
+            localStorage.setItem('k8s_users', JSON.stringify(users));
+            renderUsers();
+        }
+
+        function login(name) {
+            currentUser = name;
+            document.getElementById('profile-section').classList.add('hidden');
+            document.getElementById('chat-section').classList.remove('hidden');
+            document.getElementById('current-display-name').innerText = name;
+            document.getElementById('current-avatar').innerText = name[0].toUpperCase();
+        }
+
+        // Chat logic
+        document.getElementById('form').addEventListener('submit', (e) => {
             e.preventDefault();
+            const input = document.getElementById('input');
             if (input.value) {
-                socket.emit('chat message', input.value);
+                socket.emit('chat message', { user: currentUser, text: input.value });
                 input.value = '';
             }
         });
 
-        socket.on('chat message', function(msg) {
-            var item = document.createElement('li');
-            item.textContent = msg;
-            document.getElementById('messages').appendChild(item);
-            window.scrollTo(0, document.body.scrollHeight);
+        socket.on('chat message', (data) => {
+            const messages = document.getElementById('messages');
+            const isMe = data.user === currentUser;
+            const div = document.createElement('div');
+            div.className = `flex ${isMe ? 'justify-end' : 'justify-start'}`;
+            div.innerHTML = `
+                <div class="${isMe ? 'bg-blue-600 rounded-tr-none' : 'bg-slate-800 rounded-tl-none'} p-3 rounded-2xl max-w-[70%] shadow-lg border border-white/10">
+                    <p class="text-[10px] ${isMe ? 'text-blue-200' : 'text-blue-400'} font-bold mb-1 uppercase">${data.user}</p>
+                    <p class="text-sm">${data.text}</p>
+                </div>
+            `;
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
         });
+
+        renderUsers();
     </script>
 </body>
 </html>
