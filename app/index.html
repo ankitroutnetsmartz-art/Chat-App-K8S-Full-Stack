@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>K8S Pro Chat | Secure</title>
+    <title>K8S Pro Chat | v10</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -14,55 +14,44 @@
             background-size: cover;
             background-blend-mode: overlay;
         }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
     </style>
 </head>
-<body class="h-screen text-slate-200 overflow-hidden">
+<body class="h-screen text-slate-200 overflow-hidden font-sans">
 
     <div id="profile-section" class="flex items-center justify-center h-full p-6">
-        <div class="glass p-8 rounded-3xl w-full max-w-md shadow-2xl">
-            <div class="text-center mb-8">
-                <i class="fas fa-user-shield text-5xl text-blue-500 mb-4"></i>
-                <h2 class="text-3xl font-bold">User Profiles</h2>
-                <p class="text-slate-400">Select or create a user to start</p>
+        <div class="glass p-10 rounded-[2.5rem] w-full max-w-md shadow-2xl">
+            <div class="text-center mb-10">
+                <h2 class="text-3xl font-black tracking-tight text-blue-400">Secure Tunnel</h2>
+                <p id="profile-count" class="text-slate-500 mt-2 text-xs font-bold uppercase tracking-widest">0 / 2 Profiles</p>
             </div>
-            
-            <div id="user-list" class="space-y-3 mb-6 max-h-60 overflow-y-auto custom-scrollbar">
-                </div>
-
-            <div class="flex gap-2">
-                <input id="new-username" class="flex-grow bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="New Username...">
-                <button onclick="addUser()" class="bg-emerald-600 hover:bg-emerald-500 p-3 rounded-xl transition-all">
-                    <i class="fas fa-user-plus"></i>
-                </button>
+            <div id="user-list" class="space-y-4 mb-8"></div>
+            <div id="add-user-container" class="flex gap-3">
+                <input id="new-username" class="flex-grow bg-slate-900 border border-slate-700 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Name...">
+                <button onclick="addUser()" class="bg-blue-600 p-5 rounded-2xl shadow-lg hover:bg-blue-500 transition-all"><i class="fas fa-plus"></i></button>
             </div>
         </div>
     </div>
 
     <div id="chat-section" class="hidden flex flex-col h-full">
-        <header class="p-4 glass flex justify-between items-center z-10">
+        <header class="p-4 glass flex justify-between items-center z-10 shadow-lg">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold" id="current-avatar">?</div>
+                <div id="current-avatar" class="w-11 h-11 rounded-full bg-blue-600 flex items-center justify-center font-bold">?</div>
                 <div>
-                    <h1 class="font-bold" id="current-display-name">Username</h1>
-                    <p class="text-xs text-emerald-400">● Online</p>
+                    <h1 class="font-bold text-lg" id="current-display-name">Username</h1>
+                    <p id="typing-indicator" class="text-[10px] text-emerald-400 font-bold uppercase transition-opacity opacity-0">Typing...</p>
                 </div>
             </div>
-            <button onclick="location.reload()" class="text-slate-400 hover:text-white transition-colors">
-                <i class="fas fa-sign-out-alt text-xl"></i>
-            </button>
+            <button onclick="location.reload()" class="text-slate-400 hover:text-red-400"><i class="fas fa-power-off text-xl"></i></button>
         </header>
 
-        <main id="messages" class="flex-grow p-6 space-y-4 overflow-y-auto chat-wallpaper custom-scrollbar">
-            </main>
+        <main id="messages" class="flex-grow p-6 space-y-6 overflow-y-auto chat-wallpaper custom-scrollbar"></main>
 
         <footer class="p-4 glass">
             <form id="form" class="max-w-5xl mx-auto flex gap-3">
-                <input id="input" autocomplete="off" class="flex-grow bg-slate-800/80 border border-slate-700 rounded-2xl px-6 py-4 outline-none focus:ring-2 focus:ring-blue-500" placeholder="Type a message...">
-                <button class="bg-blue-600 hover:bg-blue-500 p-4 rounded-2xl shadow-lg transition-transform active:scale-95">
-                    <i class="fas fa-paper-plane"></i>
-                </button>
+                <input id="input" autocomplete="off" class="flex-grow bg-slate-800/80 border border-slate-700 rounded-2xl px-6 py-4 outline-none focus:ring-2 focus:ring-blue-500" placeholder="Message...">
+                <button class="bg-blue-600 p-4 rounded-2xl shadow-lg"><i class="fas fa-paper-plane"></i></button>
             </form>
         </footer>
     </div>
@@ -71,55 +60,49 @@
     <script>
         const socket = io();
         let currentUser = null;
-        let users = JSON.parse(localStorage.getItem('k8s_users') || '[]');
+        let users = JSON.parse(localStorage.getItem('k8s_private_users') || '[]');
+        let typingTimeout;
 
+        // UI Logic
         function renderUsers() {
             const list = document.getElementById('user-list');
+            document.getElementById('profile-count').innerText = `${users.length} / 2 Profiles`;
+            document.getElementById('add-user-container').style.display = users.length >= 2 ? 'none' : 'flex';
             list.innerHTML = users.map(u => `
-                <div class="flex items-center justify-between bg-slate-800/50 p-3 rounded-xl border border-slate-700/50 hover:bg-slate-700/50 transition-all cursor-pointer">
-                    <div class="flex items-center gap-3" onclick="login('${u}')">
-                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-xs font-bold">${u[0].toUpperCase()}</div>
-                        <span>${u}</span>
-                    </div>
-                    <button onclick="deleteUser('${u}')" class="text-slate-500 hover:text-red-400 p-2">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
-                </div>
-            `).join('');
+                <div class="flex items-center justify-between bg-slate-800/50 p-4 rounded-2xl border border-white/5 hover:border-blue-500/50 cursor-pointer" onclick="login('${u}')">
+                    <div class="flex items-center gap-4"><div class="w-10 h-10 rounded-xl bg-slate-700 flex items-center justify-center font-bold text-blue-400">${u[0].toUpperCase()}</div><span class="font-bold text-slate-200">${u}</span></div>
+                    <button onclick="event.stopPropagation(); deleteUser('${u}')" class="text-slate-600 hover:text-red-500"><i class="fas fa-trash-alt"></i></button>
+                </div>`).join('');
         }
 
         function addUser() {
             const name = document.getElementById('new-username').value.trim();
-            if (name && !users.includes(name)) {
-                users.push(name);
-                localStorage.setItem('k8s_users', JSON.stringify(users));
-                document.getElementById('new-username').value = '';
-                renderUsers();
-            }
+            if (name && users.length < 2 && !users.includes(name)) { users.push(name); localStorage.setItem('k8s_private_users', JSON.stringify(users)); renderUsers(); }
         }
 
-        function deleteUser(name) {
-            users = users.filter(u => u !== name);
-            localStorage.setItem('k8s_users', JSON.stringify(users));
-            renderUsers();
-        }
+        function deleteUser(name) { users = users.filter(u => u !== name); localStorage.setItem('k8s_private_users', JSON.stringify(users)); renderUsers(); }
 
-        function login(name) {
-            currentUser = name;
-            document.getElementById('profile-section').classList.add('hidden');
-            document.getElementById('chat-section').classList.remove('hidden');
-            document.getElementById('current-display-name').innerText = name;
-            document.getElementById('current-avatar').innerText = name[0].toUpperCase();
-        }
+        function login(name) { currentUser = name; document.getElementById('profile-section').classList.add('hidden'); document.getElementById('chat-section').classList.remove('hidden'); document.getElementById('current-display-name').innerText = name; document.getElementById('current-avatar').innerText = name[0].toUpperCase(); }
 
-        // Chat logic
+        // Chat & Typing Events
+        const input = document.getElementById('input');
+        input.addEventListener('input', () => {
+            socket.emit('typing', { user: currentUser, isTyping: true });
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => socket.emit('typing', { user: currentUser, isTyping: false }), 2000);
+        });
+
         document.getElementById('form').addEventListener('submit', (e) => {
             e.preventDefault();
-            const input = document.getElementById('input');
             if (input.value) {
-                socket.emit('chat message', { user: currentUser, text: input.value });
+                socket.emit('chat message', { user: currentUser, text: input.value, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
                 input.value = '';
+                socket.emit('typing', { user: currentUser, isTyping: false });
             }
+        });
+
+        socket.on('typing', (data) => {
+            if (data.user !== currentUser) { document.getElementById('typing-indicator').style.opacity = data.isTyping ? '1' : '0'; }
         });
 
         socket.on('chat message', (data) => {
@@ -128,11 +111,12 @@
             const div = document.createElement('div');
             div.className = `flex ${isMe ? 'justify-end' : 'justify-start'}`;
             div.innerHTML = `
-                <div class="${isMe ? 'bg-blue-600 rounded-tr-none' : 'bg-slate-800 rounded-tl-none'} p-3 rounded-2xl max-w-[70%] shadow-lg border border-white/10">
-                    <p class="text-[10px] ${isMe ? 'text-blue-200' : 'text-blue-400'} font-bold mb-1 uppercase">${data.user}</p>
-                    <p class="text-sm">${data.text}</p>
-                </div>
-            `;
+                <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[80%]">
+                    <div class="${isMe ? 'bg-blue-600 rounded-tr-none' : 'bg-slate-800 rounded-tl-none'} p-3 rounded-2xl shadow-xl border border-white/5">
+                        <p class="text-sm">${data.text}</p>
+                        <p class="text-[9px] ${isMe ? 'text-blue-200' : 'text-slate-500'} font-bold mt-1 text-right">${data.time}</p>
+                    </div>
+                </div>`;
             messages.appendChild(div);
             messages.scrollTop = messages.scrollHeight;
         });

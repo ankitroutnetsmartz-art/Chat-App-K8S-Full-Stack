@@ -20,12 +20,14 @@ db.connect().catch(err => console.error('DB Error:', err.message));
 app.get('/', (req, res) => res.sendFile(__dirname + '/index.html'));
 
 io.on('connection', (socket) => {
+    socket.on('typing', (data) => socket.broadcast.emit('typing', data));
+    
     socket.on('chat message', async (data) => {
         try {
-            await db.query('INSERT INTO messages (content) VALUES ($1)', [`${data.user}: ${data.text}`]);
+            await db.query('INSERT INTO messages (content) VALUES ($1)', [`[${data.time}] ${data.user}: ${data.text}`]);
             io.emit('chat message', data);
         } catch (err) { console.error(err.message); }
     });
 });
 
-server.listen(3000, '0.0.0.0', () => console.log('🚀 Pro Chat on Port 3000'));
+server.listen(3000, '0.0.0.0', () => console.log('🚀 Tunnel v10 Live'));
