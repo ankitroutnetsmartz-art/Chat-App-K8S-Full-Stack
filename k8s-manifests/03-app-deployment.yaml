@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chat-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chat-ui
+  template:
+    metadata:
+      labels:
+        app: chat-ui
+    spec:
+      containers:
+      - name: node-chat
+        image: node:18-alpine
+        workingDir: /app
+        # This installs dependencies inside the pod and starts your server.js
+        command: ["sh", "-c", "npm install express socket.io pg && node server.js"]
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "256Mi"
+        envFrom:
+        - configMapRef:
+            name: chat-config
+        - secretRef:
+            name: chat-secret
+        ports:
+        - containerPort: 3000
+        volumeMounts:
+        - name: app-code
+          mountPath: /app
+      volumes:
+      - name: app-code
+        hostPath:
+          path: /home/ankit/git/Chat-App-K8S-Full-Stack/app
+          type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chat-service
+spec:
+  selector:
+    app: chat-ui
+  ports:
+  - port: 80
+    targetPort: 3000

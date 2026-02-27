@@ -1,31 +1,38 @@
+cat <<EOF > server.js
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
+const { Client } = require('pg');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Serve the UI
+// Database configuration using Environment Variables
+const db = new Client({
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'postgres',
+  password: process.env.POSTGRES_PASSWORD || 'password',
+  database: process.env.DB_NAME || 'postgres',
+  port: 5432,
+});
+
+db.connect()
+  .then(() => console.log('Connected to PostgreSQL'))
+  .catch(err => console.error('Database connection error', err.stack));
+
 app.get('/', (req, res) => {
     res.sendFile(__dirname + '/index.html');
 });
 
-// Real-time logic
 io.on('connection', (socket) => {
-    console.log('A user connected');
-
     socket.on('chat message', (msg) => {
-        console.log('Message received: ' + msg);
-        io.emit('chat message', msg); // Send message to EVERYONE
-    });
-
-    socket.on('disconnect', () => {
-        console.log('User disconnected');
+        // Here we could add db.query('INSERT INTO messages...') later
+        io.emit('chat message', msg);
     });
 });
 
-const PORT = 3000;
-server.listen(PORT, () => {
-    console.log(`Chat app running at http://localhost:${PORT}`);
+server.listen(3000, '0.0.0.0', () => {
+    console.log('✅ Chat app ready for K8s deployment!');
 });
+EOF
