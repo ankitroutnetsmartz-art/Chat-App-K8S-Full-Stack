@@ -15,7 +15,7 @@ const db = new Client({
   port: 5432,
 });
 
-db.connect().catch(err => console.error('DB Error:', err.message));
+db.connect().catch(err => console.error('DB Connection Failed:', err.message));
 
 app.get('/', (req, res) => res.sendFile(__dirname + '/index.html'));
 
@@ -26,8 +26,8 @@ io.on('connection', (socket) => {
         try {
             await db.query('INSERT INTO messages (content) VALUES ($1)', [`[${data.time}] ${data.user}: ${data.text}`]);
             io.emit('chat message', data);
-        } catch (err) { console.error(err.message); }
+        } catch (err) { console.error('Save failed:', err.message); }
     });
 });
 
-server.listen(3000, '0.0.0.0', () => console.log('🚀 Tunnel v10 Live'));
+server.listen(3000, '0.0.0.0', () => console.log('🚀 Tunnel v13 Online'));
