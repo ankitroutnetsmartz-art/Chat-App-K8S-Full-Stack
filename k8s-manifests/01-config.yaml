@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-config
+data:
+  DB_NAME: "user_db"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db-secret
+type: Opaque
+stringData:
+  # In a real scenario, use stronger passwords!
+  POSTGRES_PASSWORD: "supersecretpassword"
