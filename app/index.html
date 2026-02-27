@@ -3,96 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>K8S Chat Pro | v13 Themes</title>
+    <title>K8S Chat Pro | v14 Control</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root {
-            --bg-main: #020617;
-            --bg-glass: rgba(15, 23, 42, 0.8);
-            --accent: #2563eb;
-            --chat-bg: url('https://w0.peakpx.com/wallpaper/508/606/HD-wallpaper-whatsapp-dark-background-whatsapp-dark-mode.jpg');
-            --bubble-me: #2563eb;
-            --bubble-them: #1e293b;
-        }
-
-        .theme-cyber {
-            --bg-main: #09090b;
-            --bg-glass: rgba(24, 24, 27, 0.9);
-            --accent: #f0abfc;
-            --chat-bg: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), url('https://img.freepik.com/premium-photo/abstract-cyberpunk-background-concept_1254991-34.jpg');
-            --bubble-me: #701a75;
-            --bubble-them: #27272a;
-        }
-
-        .theme-light {
-            --bg-main: #f8fafc;
-            --bg-glass: rgba(255, 255, 255, 0.9);
-            --accent: #3b82f6;
-            --chat-bg: none;
-            --bubble-me: #3b82f6;
-            --bubble-them: #e2e8f0;
-        }
-
+        :root { --bg-main: #020617; --bg-glass: rgba(15, 23, 42, 0.8); --accent: #2563eb; --bubble-me: #2563eb; --bubble-them: #1e293b; }
         body { background-color: var(--bg-main); transition: all 0.4s ease; }
         .glass { background: var(--bg-glass); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
-        .nav-active { color: var(--accent); border-bottom: 2px solid var(--accent); }
-        .chat-wallpaper { background: var(--chat-bg); background-size: cover; background-blend-mode: overlay; }
-        .bubble-me { background-color: var(--bubble-me); }
-        .bubble-them { background-color: var(--bubble-them); }
-        .accent-text { color: var(--accent); }
+        .chat-wallpaper { background-image: url('https://w0.peakpx.com/wallpaper/508/606/HD-wallpaper-whatsapp-dark-background-whatsapp-dark-mode.jpg'); background-size: cover; background-blend-mode: overlay; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
     </style>
 </head>
 <body class="h-screen text-slate-200 overflow-hidden font-sans">
 
     <nav class="glass fixed top-0 w-full h-16 z-50 flex items-center justify-between px-8">
         <div class="flex items-center gap-3">
-            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-black">C</div>
-            <span class="font-bold text-xl tracking-tighter uppercase">Tunnel<span class="accent-text">Pro</span></span>
+            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-black uppercase shadow-lg shadow-blue-500/20">T</div>
+            <span class="font-bold text-xl tracking-tighter uppercase">Tunnel<span class="text-blue-500">Pro</span></span>
         </div>
         <div class="flex gap-8">
-            <button onclick="showView('home')" class="nav-item text-sm font-bold uppercase nav-active" id="nav-home">Home</button>
-            <button onclick="showView('themes')" class="nav-item text-sm font-bold uppercase text-slate-400" id="nav-themes">Themes</button>
-            <button onclick="showView('arch')" class="nav-item text-sm font-bold uppercase text-slate-400" id="nav-arch">Architecture</button>
+            <button onclick="showView('home')" class="text-sm font-bold uppercase" id="nav-home">Home</button>
+            <button onclick="showView('arch')" class="text-sm font-bold uppercase text-slate-400" id="nav-arch">Architecture</button>
         </div>
-        <div class="text-[10px] accent-text font-bold border border-current px-2 py-1 rounded-full opacity-50">PRO MODE</div>
+        <div class="flex items-center gap-2">
+            <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+            <span id="session-count" class="text-[10px] font-black text-emerald-500 uppercase">1 Active Node</span>
+        </div>
     </nav>
 
-    <main class="mt-16 h-[calc(100vh-64px)] overflow-y-auto">
+    <main class="mt-16 h-[calc(100vh-64px)]">
         <section id="view-home" class="view flex items-center justify-center min-h-full">
             <div class="w-full max-w-md bg-slate-900/40 p-10 rounded-[2.5rem] border border-white/5">
                 <div id="user-list" class="space-y-4 mb-8"></div>
                 <div id="add-user-container" class="flex gap-3">
                     <input id="new-username" class="flex-grow bg-slate-950 border border-slate-800 rounded-2xl px-5 py-4 outline-none focus:ring-1 focus:ring-blue-500" placeholder="New Profile...">
-                    <button onclick="addUser()" class="bg-blue-600 p-5 rounded-2xl"><i class="fas fa-plus"></i></button>
-                </div>
-            </div>
-        </section>
-
-        <section id="view-themes" class="view hidden p-10 max-w-4xl mx-auto">
-            <h2 class="text-3xl font-black mb-10">Visual Engine</h2>
-            <div class="grid grid-cols-3 gap-6">
-                <div onclick="setTheme('default')" class="p-4 bg-slate-900 rounded-3xl border border-white/5 hover:border-blue-500 cursor-pointer transition-all">
-                    <div class="h-24 bg-slate-800 rounded-xl mb-3 shadow-inner" style="background-image: url('https://w0.peakpx.com/wallpaper/508/606/HD-wallpaper-whatsapp-dark-background-whatsapp-dark-mode.jpg'); background-size: cover;"></div>
-                    <p class="text-center font-bold text-sm">WhatsApp Dark</p>
-                </div>
-                <div onclick="setTheme('cyber')" class="p-4 bg-slate-900 rounded-3xl border border-white/5 hover:border-magenta-500 cursor-pointer transition-all">
-                    <div class="h-24 bg-purple-900/20 rounded-xl mb-3 border border-purple-500/30"></div>
-                    <p class="text-center font-bold text-sm">Cyberpunk</p>
-                </div>
-                <div onclick="setTheme('light')" class="p-4 bg-white rounded-3xl border border-slate-200 cursor-pointer transition-all text-slate-900">
-                    <div class="h-24 bg-slate-100 rounded-xl mb-3"></div>
-                    <p class="text-center font-bold text-sm">Classic Light</p>
+                    <button onclick="addUser()" class="bg-blue-600 p-5 rounded-2xl shadow-xl"><i class="fas fa-plus"></i></button>
                 </div>
             </div>
         </section>
 
         <section id="view-arch" class="view hidden p-10 max-w-4xl mx-auto">
-            <div class="bg-slate-900 p-8 rounded-3xl border border-blue-500/20">
-                <h3 class="text-xl font-bold mb-4 accent-text underline">K8S Stack Details</h3>
-                <p class="text-sm text-slate-400">Application: Node.js (Socket.io)</p>
-                <p class="text-sm text-slate-400">Database: PostgreSQL (StatefulSet)</p>
-                <p class="text-sm text-slate-400">Orchestration: Minikube / Kubernetes</p>
+            <div class="bg-slate-900 p-8 rounded-3xl border border-blue-500/20 shadow-2xl">
+                <h3 class="text-xl font-bold mb-4 text-blue-400"><i class="fas fa-server mr-2"></i>Infrastructure Log</h3>
+                <p class="text-sm text-slate-400 mb-2">● Real-time sync via WebSocket Events</p>
+                <p class="text-sm text-slate-400 mb-2">● Atomic Database Operations (PostgreSQL)</p>
+                <p class="text-sm text-slate-400">● Pod Health: <span class="text-emerald-500 font-bold">OPTIMAL</span></p>
             </div>
         </section>
     </main>
@@ -102,17 +58,17 @@
             <div class="flex items-center gap-3">
                 <div id="current-avatar" class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold">?</div>
                 <div>
-                    <h1 class="font-bold" id="current-display-name">Username</h1>
-                    <p id="typing-indicator" class="text-[10px] accent-text font-black uppercase opacity-0 animate-pulse">Typing...</p>
+                    <h1 class="font-bold text-lg" id="current-display-name">Username</h1>
+                    <p id="typing-indicator" class="text-[10px] text-blue-400 font-black uppercase opacity-0">Typing...</p>
                 </div>
             </div>
             <button onclick="closeChat()" class="text-slate-400 hover:text-red-400 p-2"><i class="fas fa-times text-xl"></i></button>
         </header>
-        <main id="messages" class="flex-grow p-6 space-y-4 overflow-y-auto chat-wallpaper"></main>
+        <main id="messages" class="flex-grow p-6 space-y-4 overflow-y-auto chat-wallpaper custom-scrollbar"></main>
         <footer class="p-4 glass">
             <form id="form" class="max-w-5xl mx-auto flex gap-3">
-                <input id="input" autocomplete="off" class="flex-grow bg-slate-800 rounded-2xl px-6 py-4 outline-none border border-white/5 focus:border-blue-500" placeholder="Type message...">
-                <button class="bg-blue-600 p-4 rounded-2xl w-14 shadow-lg"><i class="fas fa-paper-plane"></i></button>
+                <input id="input" autocomplete="off" class="flex-grow bg-slate-800 rounded-2xl px-6 py-4 outline-none border border-white/5 focus:border-blue-500" placeholder="Send secure message...">
+                <button class="bg-blue-600 p-4 rounded-2xl w-14 shadow-xl"><i class="fas fa-paper-plane"></i></button>
             </form>
         </footer>
     </div>
@@ -124,15 +80,9 @@
         let users = JSON.parse(localStorage.getItem('k8s_private_users') || '[]');
         let typingTimeout;
 
-        function setTheme(theme) {
-            document.body.className = theme === 'default' ? '' : 'theme-' + theme;
-        }
-
         function showView(viewId) {
             document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
             document.getElementById('view-' + viewId).classList.remove('hidden');
-            document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('nav-active', 'text-slate-200'));
-            document.getElementById('nav-' + viewId).classList.add('nav-active', 'text-slate-200');
         }
 
         function login(name) {
@@ -148,8 +98,8 @@
             const list = document.getElementById('user-list');
             document.getElementById('add-user-container').style.display = users.length >= 2 ? 'none' : 'flex';
             list.innerHTML = users.map(u => `
-                <div class="flex items-center justify-between bg-slate-900/60 p-5 rounded-3xl border border-white/5 hover:border-blue-500 cursor-pointer" onclick="login('${u}')">
-                    <div class="flex items-center gap-4"><div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-white shadow-lg">${u[0].toUpperCase()}</div><span>${u}</span></div>
+                <div class="flex items-center justify-between bg-slate-900/60 p-5 rounded-3xl border border-white/5 hover:border-blue-500 cursor-pointer shadow-sm" onclick="login('${u}')">
+                    <div class="flex items-center gap-4"><div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-bold">${u[0].toUpperCase()}</div><span>${u}</span></div>
                     <button onclick="event.stopPropagation(); deleteUser('${u}')" class="text-slate-600 hover:text-red-400"><i class="fas fa-trash-alt"></i></button>
                 </div>`).join('');
         }
@@ -161,7 +111,6 @@
 
         function deleteUser(name) { users = users.filter(u => u !== name); localStorage.setItem('k8s_private_users', JSON.stringify(users)); renderUsers(); }
 
-        // Typing Indicator logic
         const input = document.getElementById('input');
         input.addEventListener('input', () => {
             socket.emit('typing', { user: currentUser, isTyping: true });
@@ -169,29 +118,39 @@
             typingTimeout = setTimeout(() => socket.emit('typing', { user: currentUser, isTyping: false }), 2000);
         });
 
-        socket.on('typing', (data) => {
-            if (data.user !== currentUser) {
-                document.getElementById('typing-indicator').style.opacity = data.isTyping ? '1' : '0';
-            }
-        });
-
         document.getElementById('form').addEventListener('submit', (e) => {
             e.preventDefault();
             if (input.value) {
-                socket.emit('chat message', { user: currentUser, text: input.value, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
+                const msgId = Date.now();
+                socket.emit('chat message', { id: msgId, user: currentUser, text: input.value, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
                 input.value = '';
                 socket.emit('typing', { user: currentUser, isTyping: false });
             }
+        });
+
+        function deleteMessage(msgId) { socket.emit('delete message', msgId); }
+
+        socket.on('typing', (data) => { if (data.user !== currentUser) document.getElementById('typing-indicator').style.opacity = data.isTyping ? '1' : '0'; });
+
+        socket.on('delete message', (msgId) => {
+            const el = document.getElementById('msg-' + msgId);
+            if (el) el.remove();
         });
 
         socket.on('chat message', (data) => {
             const messages = document.getElementById('messages');
             const isMe = data.user === currentUser;
             const div = document.createElement('div');
-            div.className = `flex ${isMe ? 'justify-end' : 'justify-start'}`;
-            div.innerHTML = `<div class="max-w-[80%] ${isMe ? 'bubble-me rounded-tr-none' : 'bubble-them rounded-tl-none'} p-4 rounded-2xl shadow-xl text-white">
-                <p class="text-sm font-medium">${data.text}</p><p class="text-[9px] font-bold mt-1 text-right opacity-60 uppercase tracking-tighter">${data.time}</p>
-            </div>`;
+            div.id = 'msg-' + data.id;
+            div.className = `flex ${isMe ? 'justify-end' : 'justify-start'} group`;
+            div.innerHTML = `
+                <div class="relative flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[80%]">
+                    <div class="${isMe ? 'bg-blue-600 rounded-tr-none' : 'bg-slate-800 rounded-tl-none'} p-4 rounded-2xl shadow-xl">
+                        <p class="text-sm">${data.text}</p>
+                        <p class="text-[9px] font-bold mt-1 text-right opacity-50">${data.time}</p>
+                    </div>
+                    ${isMe ? `<button onclick="deleteMessage('${data.id}')" class="absolute -left-8 top-1/2 -translate-y-1/2 text-slate-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"><i class="fas fa-trash-alt text-xs"></i></button>` : ''}
+                </div>`;
             messages.appendChild(div);
             messages.scrollTop = messages.scrollHeight;
         });

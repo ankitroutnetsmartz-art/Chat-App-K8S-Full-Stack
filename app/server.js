@@ -22,6 +22,13 @@ app.get('/', (req, res) => res.sendFile(__dirname + '/index.html'));
 io.on('connection', (socket) => {
     socket.on('typing', (data) => socket.broadcast.emit('typing', data));
     
+    socket.on('delete message', async (msgId) => {
+        try {
+            // In a real prod app, you'd delete from DB here. For now, we sync UI.
+            io.emit('delete message', msgId);
+        } catch (err) { console.error(err); }
+    });
+
     socket.on('chat message', async (data) => {
         try {
             await db.query('INSERT INTO messages (content) VALUES ($1)', [`[${data.time}] ${data.user}: ${data.text}`]);
@@ -30,4 +37,4 @@ io.on('connection', (socket) => {
     });
 });
 
-server.listen(3000, '0.0.0.0', () => console.log('🚀 Tunnel v13 Online'));
+server.listen(3000, '0.0.0.0', () => console.log('🚀 Tunnel v14 Control Live'));
