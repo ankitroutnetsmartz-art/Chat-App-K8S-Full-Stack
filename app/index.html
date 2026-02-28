@@ -98,10 +98,21 @@
             const list = document.getElementById('user-list');
             document.getElementById('add-user-container').style.display = users.length >= 2 ? 'none' : 'flex';
             list.innerHTML = users.map(u => `
-                <div class="flex items-center justify-between bg-slate-900/60 p-5 rounded-3xl border border-white/5 hover:border-blue-500 cursor-pointer shadow-sm" onclick="login('${u}')">
+                <div class="flex items-center justify-between bg-slate-900/60 p-5 rounded-3xl border border-white/5 hover:border-blue-500 cursor-pointer shadow-sm" data-username="${u.replace(/"/g, '&quot;')}">
                     <div class="flex items-center gap-4"><div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-bold">${u[0].toUpperCase()}</div><span>${u}</span></div>
-                    <button onclick="event.stopPropagation(); deleteUser('${u}')" class="text-slate-600 hover:text-red-400"><i class="fas fa-trash-alt"></i></button>
+                    <button class="text-slate-600 hover:text-red-400 delete-user-btn" data-username="${u.replace(/"/g, '&quot;')}"><i class="fas fa-trash-alt"></i></button>
                 </div>`).join('');
+            
+            // Add event listeners instead of inline onclick
+            list.querySelectorAll('.flex.items-center.justify-between').forEach(div => {
+                div.addEventListener('click', () => login(div.dataset.username));
+            });
+            list.querySelectorAll('.delete-user-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteUser(btn.dataset.username);
+                });
+            });
         }
 
         function addUser() {
@@ -149,9 +160,16 @@
                         <p class="text-sm">${data.text}</p>
                         <p class="text-[9px] font-bold mt-1 text-right opacity-50">${data.time}</p>
                     </div>
-                    ${isMe ? `<button onclick="deleteMessage('${data.id}')" class="absolute -left-8 top-1/2 -translate-y-1/2 text-slate-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"><i class="fas fa-trash-alt text-xs"></i></button>` : ''}
+                    ${isMe ? `<button class="delete-msg-btn absolute -left-8 top-1/2 -translate-y-1/2 text-slate-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all" data-msg-id="${data.id}"><i class="fas fa-trash-alt text-xs"></i></button>` : ''}
                 </div>`;
             messages.appendChild(div);
+            
+            // Add event listener to delete button if it exists
+            const deleteBtn = div.querySelector('.delete-msg-btn');
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', () => deleteMessage(data.id));
+            }
+            
             messages.scrollTop = messages.scrollHeight;
         });
 

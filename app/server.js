@@ -2,6 +2,8 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const { Client } = require('pg');
+const { createAdapter } = require('@socket.io/redis-adapter');
+const { createClient } = require('redis');
 
 const app = express();
 const server = http.createServer(app);
@@ -16,6 +18,22 @@ const db = new Client({
 });
 
 db.connect().catch(err => console.error('DB Connection Failed:', err.message));
+
+// Setup Redis adapter for Socket.IO clustering
+const redisClient = createClient({
+  host: process.env.REDIS_HOST || 'redis-service',
+  port: process.env.REDIS_PORT || 6379,
+});
+
+redisClient.connect()
+  .then(() => {
+    const pubClient = redisClient.duplicate();
+    return pubClient.connect().then(() => {
+      io.adapter(createAdapter(pubClient, redisClient));
+      console.log('✅ Redis adapter connected for Socket.IO clustering');
+    });
+  })
+  .catch(err => console.warn('⚠️ Redis not available, running without clustering:', err.message));
 
 app.get('/', (req, res) => res.sendFile(__dirname + '/index.html'));
 
