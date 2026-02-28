@@ -37,21 +37,66 @@ redisClient.connect()
 
 app.get('/', (req, res) => res.sendFile(__dirname + '/index.html'));
 
+// return chat history with pagination (offset=0 returns newest messages)
+app.get('/messages', async (req, res) => {
+    const limit = parseInt(req.query.limit, 10) || 50;
+    const offset = parseInt(req.query.offset, 10) || 0;
+    try {
+        const result = await db.query(
+            'SELECT id, sender, text, time, delivered_at, read_at, created_at FROM messages ORDER BY created_at DESC LIMIT $1 OFFSET $2',
+            [limit, offset]
+        );
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 io.on('connection', (socket) => {
+    // broadcast typing notifications to everyone except the originator
     socket.on('typing', (data) => socket.broadcast.emit('typing', data));
-    
+
+    // message deletion (also persist in DB)
     socket.on('delete message', async (msgId) => {
         try {
-            // In a real prod app, you'd delete from DB here. For now, we sync UI.
+            await db.query('DELETE FROM messages WHERE id = $1', [msgId]);
             io.emit('delete message', msgId);
         } catch (err) { console.error(err); }
     });
 
+    // new chat message - insert into db and return the real id/timestamp
     socket.on('chat message', async (data) => {
         try {
-            await db.query('INSERT INTO messages (content) VALUES ($1)', [`[${data.time}] ${data.user}: ${data.text}`]);
-            io.emit('chat message', data);
+            const res = await db.query(
+                'INSERT INTO messages (sender, text, time) VALUES ($1, $2, $3) RETURNING id, created_at',
+                [data.user, data.text, data.time]
+            );
+            const msgId = res.rows[0].id;
+            const createdAt = res.rows[0].created_at;
+            // normalize payload: use `sender` to match schema and front-end
+            io.emit('chat message', {
+                sender: data.user,
+                text: data.text,
+                time: data.time,
+                id: msgId,
+                created_at: createdAt
+            });
         } catch (err) { console.error('Save failed:', err.message); }
+    });
+
+    // delivery/read receipts
+    socket.on('message delivered', async (msgId) => {
+        try {
+            await db.query('UPDATE messages SET delivered_at = NOW() WHERE id = $1', [msgId]);
+            io.emit('message delivered', msgId);
+        } catch (err) { console.error(err); }
+    });
+
+    socket.on('message read', async (msgId) => {
+        try {
+            await db.query('UPDATE messages SET read_at = NOW() WHERE id = $1', [msgId]);
+            io.emit('message read', msgId);
+        } catch (err) { console.error(err); }
     });
 });
 

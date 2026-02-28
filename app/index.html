@@ -64,6 +64,10 @@
             </div>
             <button onclick="closeChat()" class="text-slate-400 hover:text-red-400 p-2"><i class="fas fa-times text-xl"></i></button>
         </header>
+        <!-- search/filter bar -->
+        <div class="p-2 bg-slate-800">
+            <input id="search" class="w-full bg-slate-700/50 text-sm rounded-lg px-3 py-2 outline-none" placeholder="Search messages...">
+        </div>
         <main id="messages" class="flex-grow p-6 space-y-4 overflow-y-auto chat-wallpaper custom-scrollbar"></main>
         <footer class="p-4 glass">
             <form id="form" class="max-w-5xl mx-auto flex gap-3">
@@ -132,8 +136,7 @@
         document.getElementById('form').addEventListener('submit', (e) => {
             e.preventDefault();
             if (input.value) {
-                const msgId = Date.now();
-                socket.emit('chat message', { id: msgId, user: currentUser, text: input.value, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
+                socket.emit('chat message', { user: currentUser, text: input.value, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
                 input.value = '';
                 socket.emit('typing', { user: currentUser, isTyping: false });
             }
@@ -151,29 +154,142 @@
         socket.on('chat message', (data) => {
             const messages = document.getElementById('messages');
             const isMe = data.user === currentUser;
-            const div = document.createElement('div');
-            div.id = 'msg-' + data.id;
-            div.className = `flex ${isMe ? 'justify-end' : 'justify-start'} group`;
-            div.innerHTML = `
-                <div class="relative flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[80%]">
+            const msgEl = document.createElement('div');
+            msgEl.id = 'msg-' + data.id;
+            msgEl.dataset.msgId = data.id;
+            msgEl.className = `flex ${isMe ? 'justify-end' : 'justify-start'} group`;
+            msgEl.innerHTML = `
+                <div class="relative flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[80%]" data-msg-id="${data.id}">
                     <div class="${isMe ? 'bg-blue-600 rounded-tr-none' : 'bg-slate-800 rounded-tl-none'} p-4 rounded-2xl shadow-xl">
                         <p class="text-sm">${data.text}</p>
                         <p class="text-[9px] font-bold mt-1 text-right opacity-50">${data.time}</p>
                     </div>
+                    <div class="status text-[9px] text-slate-400 mt-1"></div>
                     ${isMe ? `<button class="delete-msg-btn absolute -left-8 top-1/2 -translate-y-1/2 text-slate-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all" data-msg-id="${data.id}"><i class="fas fa-trash-alt text-xs"></i></button>` : ''}
                 </div>`;
-            messages.appendChild(div);
+            messages.appendChild(msgEl);
             
+            // observe for read receipts
+            observeMessage(msgEl);
+            filterMessages();
+
             // Add event listener to delete button if it exists
-            const deleteBtn = div.querySelector('.delete-msg-btn');
+            const deleteBtn = msgEl.querySelector('.delete-msg-btn');
             if (deleteBtn) {
                 deleteBtn.addEventListener('click', () => deleteMessage(data.id));
             }
             
+            // When message arrives, if it's not ours notify delivered immediately
+            if (!isMe) {
+                socket.emit('message delivered', data.id);
+            }
+
             messages.scrollTop = messages.scrollHeight;
         });
 
+        // search/filter functionality
+        const searchInput = document.getElementById('search');
+        searchInput.addEventListener('input', filterMessages);
+
+        function filterMessages() {
+            const term = searchInput.value.toLowerCase();
+            document.querySelectorAll('#messages .relative').forEach(msg => {
+                const text = msg.innerText.toLowerCase();
+                msg.style.display = text.includes(term) ? '' : 'none';
+            });
+        }
+
+        // infinite scroll & message loading
+        const messagesContainer = document.getElementById('messages');
+        let offset = 0;
+        const limit = 50;
+        let fetching = false;
+
+        async function loadMessages() {
+            if (fetching) return;
+            fetching = true;
+            const res = await fetch(`/messages?limit=${limit}&offset=${offset}`);
+            const data = await res.json();
+            if (data.length === 0) {
+                fetching = false;
+                return;
+            }
+            // older messages come first once reversed
+            data.reverse().forEach(msg => prependMessage(msg));
+            offset += data.length;
+            fetching = false;
+        }
+
+        function prependMessage(data) {
+            const isMe = data.sender === currentUser;
+            const msgEl = document.createElement('div');
+            msgEl.id = 'msg-' + data.id;
+            msgEl.dataset.msgId = data.id;
+            msgEl.className = `flex ${isMe ? 'justify-end' : 'justify-start'} group`;
+            msgEl.innerHTML = `
+                <div class="relative flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[80%]" data-msg-id="${data.id}">
+                    <div class="${isMe ? 'bg-blue-600 rounded-tr-none' : 'bg-slate-800 rounded-tl-none'} p-4 rounded-2xl shadow-xl">
+                        <p class="text-sm">${data.text}</p>
+                        <p class="text-[9px] font-bold mt-1 text-right opacity-50">${data.time}</p>
+                    </div>
+                    <div class="status text-[9px] text-slate-400 mt-1"></div>
+                </div>`;
+            messagesContainer.prepend(msgEl);
+            observeMessage(msgEl);
+            updateStatusFromData(msgEl, data);
+            // mark as delivered for messages that aren't ours
+            if (!isMe) {
+                socket.emit('message delivered', data.id);
+            }
+            filterMessages();
+        }
+
+        messagesContainer.addEventListener('scroll', () => {
+            if (messagesContainer.scrollTop < 100) {
+                loadMessages();
+            }
+        });
+
+        function updateStatusFromData(el, data) {
+            const statusEl = el.querySelector('.status');
+            if (data.read_at) {
+                statusEl.textContent = 'Read';
+            } else if (data.delivered_at) {
+                statusEl.textContent = 'Delivered';
+            }
+        }
+
+        // delivery/read observation
+        const intersectionObserver = new IntersectionObserver(entries => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && !entry.target.dataset.read) {
+                    entry.target.dataset.read = 'true';
+                    const msgId = entry.target.dataset.msgId;
+                    socket.emit('message read', msgId);
+                }
+            });
+        }, { root: messagesContainer, threshold: 1.0 });
+
+        function observeMessage(el) {
+            const inner = el.querySelector('.relative');
+            if (inner) {
+                intersectionObserver.observe(inner);
+            }
+        }
+
+        // handle delivered/read updates from server
+        socket.on('message delivered', (msgId) => {
+            const el = document.querySelector(`[data-msg-id="${msgId}"] .status`);
+            if (el) el.textContent = 'Delivered';
+        });
+        socket.on('message read', (msgId) => {
+            const el = document.querySelector(`[data-msg-id="${msgId}"] .status`);
+            if (el) el.textContent = 'Read';
+        });
+
         renderUsers();
+        // load initial batch of messages then scroll to bottom
+        loadMessages().then(() => { messagesContainer.scrollTop = messagesContainer.scrollHeight; });
     </script>
 </body>
 </html>
