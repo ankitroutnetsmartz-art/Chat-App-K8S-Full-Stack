@@ -17,7 +17,16 @@ const db = new Client({
   port: 5432,
 });
 
-db.connect().catch(err => console.error('DB Connection Failed:', err.message));
+// Properly initialize database connection
+async function initializeDB() {
+  try {
+    await db.connect();
+    console.log('✅ Database connected');
+  } catch (err) {
+    console.error('❌ DB Connection Failed:', err.message);
+    process.exit(1);
+  }
+}
 
 // Setup Redis adapter for Socket.IO clustering
 const redisClient = createClient({
@@ -25,15 +34,17 @@ const redisClient = createClient({
   port: process.env.REDIS_PORT || 6379,
 });
 
-redisClient.connect()
-  .then(() => {
+async function initializeRedis() {
+  try {
+    await redisClient.connect();
     const pubClient = redisClient.duplicate();
-    return pubClient.connect().then(() => {
-      io.adapter(createAdapter(pubClient, redisClient));
-      console.log('✅ Redis adapter connected for Socket.IO clustering');
-    });
-  })
-  .catch(err => console.warn('⚠️ Redis not available, running without clustering:', err.message));
+    await pubClient.connect();
+    io.adapter(createAdapter(pubClient, redisClient));
+    console.log('✅ Redis adapter connected for Socket.IO clustering');
+  } catch (err) {
+    console.warn('⚠️ Redis not available, running without clustering:', err.message);
+  }
+}
 
 app.get('/', (req, res) => res.sendFile(__dirname + '/index.html'));
 
@@ -53,6 +64,12 @@ app.get('/messages', async (req, res) => {
 });
 
 io.on('connection', (socket) => {
+    console.log(`✓ Client connected: ${socket.id}`);
+
+    socket.on('disconnect', () => {
+        console.log(`✗ Client disconnected: ${socket.id}`);
+    });
+
     // broadcast typing notifications to everyone except the originator
     socket.on('typing', (data) => socket.broadcast.emit('typing', data));
 
@@ -98,6 +115,23 @@ io.on('connection', (socket) => {
             io.emit('message read', msgId);
         } catch (err) { console.error(err); }
     });
+
+    // clear all messages (admin action)
+    socket.on('clear chat', async () => {
+        try {
+            await db.query('DELETE FROM messages');
+            io.emit('clear chat');
+        } catch (err) { console.error('Failed to clear chat:', err.message); }
+    });
 });
 
 server.listen(3000, '0.0.0.0', () => console.log('🚀 Tunnel v14 Control Live'));
+
+// Initialize all services on startup
+(async () => {
+  await initializeDB();
+  await initializeRedis();
+})().catch(err => {
+  console.error('Startup failed:', err);
+  process.exit(1);
+});

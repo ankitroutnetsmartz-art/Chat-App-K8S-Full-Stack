@@ -8,6 +8,20 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root { --bg-main: #020617; --bg-glass: rgba(15, 23, 42, 0.8); --accent: #2563eb; --bubble-me: #2563eb; --bubble-them: #1e293b; }
+        [data-theme="light"] {
+            --bg-main: #f9fafb;
+            --bg-glass: rgba(255,255,255,0.8);
+            --accent: #3b82f6;
+            --bubble-me: #3b82f6;
+            --bubble-them: #e5e7eb;
+        }
+        [data-theme="solar"] {
+            --bg-main: #002b36;
+            --bg-glass: rgba(0,43,54,0.8);
+            --accent: #b58900;
+            --bubble-me: #b58900;
+            --bubble-them: #073642;
+        }
         body { background-color: var(--bg-main); transition: all 0.4s ease; }
         .glass { background: var(--bg-glass); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
         .chat-wallpaper { background-image: url('https://w0.peakpx.com/wallpaper/508/606/HD-wallpaper-whatsapp-dark-background-whatsapp-dark-mode.jpg'); background-size: cover; background-blend-mode: overlay; }
@@ -29,6 +43,15 @@
         <div class="flex items-center gap-2">
             <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
             <span id="session-count" class="text-[10px] font-black text-emerald-500 uppercase">1 Active Node</span>
+            <span id="msg-count" class="text-[10px] font-black text-emerald-500 uppercase">0 msgs</span>
+        </div>
+        <div class="relative">
+            <button id="theme-btn" class="ml-4 text-sm font-bold uppercase text-slate-200">Themes</button>
+            <div id="theme-menu" class="hidden absolute right-0 mt-2 w-40 bg-slate-800 rounded-lg shadow-lg p-3">
+                <label class="flex items-center gap-2"><input type="radio" name="theme" value="dark">Dark</label>
+                <label class="flex items-center gap-2"><input type="radio" name="theme" value="light">Light</label>
+                <label class="flex items-center gap-2"><input type="radio" name="theme" value="solar">Solar</label>
+            </div>
         </div>
     </nav>
 
@@ -53,8 +76,9 @@
         </section>
     </main>
 
-    <div id="chat-section" class="hidden fixed inset-0 z-[60] flex flex-col h-full bg-[#020617]">
+        <div id="chat-section" class="hidden fixed inset-0 z-[60] flex flex-col h-full bg-[#020617]" data-theme="dark">
         <header class="p-4 glass flex justify-between items-center shadow-lg">
+            <button id="clear-chat" class="text-slate-400 hover:text-red-400 p-2"><i class="fas fa-trash-alt"></i></button>
             <div class="flex items-center gap-3">
                 <div id="current-avatar" class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold">?</div>
                 <div>
@@ -80,6 +104,65 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
+        // theme support and persistence
+        const themes = {
+            dark: {
+                '--bg-main': '#020617',
+                '--bg-glass': 'rgba(15, 23, 42, 0.8)',
+                '--accent': '#2563eb',
+                '--bubble-me': '#2563eb',
+                '--bubble-them': '#1e293b',
+                wallpaper: 'https://w0.peakpx.com/wallpaper/508/606/HD-wallpaper-whatsapp-dark-background-whatsapp-dark-mode.jpg'
+            },
+            light: {
+                '--bg-main': '#f9fafb',
+                '--bg-glass': 'rgba(255,255,255,0.8)',
+                '--accent': '#3b82f6',
+                '--bubble-me': '#3b82f6',
+                '--bubble-them': '#e5e7eb',
+                wallpaper: 'https://www.transparenttextures.com/patterns/bright-squares.png'
+            },
+            solar: {
+                '--bg-main': '#002b36',
+                '--bg-glass': 'rgba(0,43,54,0.8)',
+                '--accent': '#b58900',
+                '--bubble-me': '#b58900',
+                '--bubble-them': '#073642',
+                wallpaper: 'https://www.transparenttextures.com/patterns/diagonal-noise.png'
+            }
+        };
+        function applyTheme(name) {
+            const root = document.getElementById('chat-section');
+            root.setAttribute('data-theme', name);
+            const vars = themes[name];
+            if (vars) {
+                for (const k in vars) {
+                    if (k === 'wallpaper') {
+                        document.querySelectorAll('.chat-wallpaper').forEach(el => {
+                            el.style.backgroundImage = `url('${vars.wallpaper}')`;
+                        });
+                    } else {
+                        document.documentElement.style.setProperty(k, vars[k]);
+                    }
+                }
+            }
+            localStorage.setItem('chat-theme', name);
+            document.querySelectorAll('#theme-menu input').forEach(i => i.checked = (i.value === name));
+        }
+        document.getElementById('theme-btn').addEventListener('click', () => {
+            document.getElementById('theme-menu').classList.toggle('hidden');
+        });
+        document.addEventListener('click', (e) => {
+            if (!document.getElementById('theme-menu').contains(e.target) && e.target.id !== 'theme-btn') {
+                document.getElementById('theme-menu').classList.add('hidden');
+            }
+        });
+        document.querySelectorAll('#theme-menu input').forEach(i => {
+            i.addEventListener('change', () => applyTheme(i.value));
+        });
+        const savedTheme = localStorage.getItem('chat-theme') || 'dark';
+        applyTheme(savedTheme);
+
         let currentUser = null;
         let users = JSON.parse(localStorage.getItem('k8s_private_users') || '[]');
         let typingTimeout;
@@ -153,7 +236,7 @@
 
         socket.on('chat message', (data) => {
             const messages = document.getElementById('messages');
-            const isMe = data.user === currentUser;
+            const isMe = data.sender === currentUser;
             const msgEl = document.createElement('div');
             msgEl.id = 'msg-' + data.id;
             msgEl.dataset.msgId = data.id;
@@ -172,6 +255,7 @@
             // observe for read receipts
             observeMessage(msgEl);
             filterMessages();
+            updateMessageCount();
 
             // Add event listener to delete button if it exists
             const deleteBtn = msgEl.querySelector('.delete-msg-btn');
@@ -197,6 +281,12 @@
                 const text = msg.innerText.toLowerCase();
                 msg.style.display = text.includes(term) ? '' : 'none';
             });
+            updateMessageCount();
+        }
+
+        function updateMessageCount() {
+            const count = document.querySelectorAll('#messages .relative').length;
+            document.getElementById('msg-count').innerText = `${count} msgs`;
         }
 
         // infinite scroll & message loading
@@ -242,6 +332,7 @@
                 socket.emit('message delivered', data.id);
             }
             filterMessages();
+            updateMessageCount();
         }
 
         messagesContainer.addEventListener('scroll', () => {
@@ -287,7 +378,21 @@
             if (el) el.textContent = 'Read';
         });
 
+        // handle clear chat broadcast
+        socket.on('clear chat', () => {
+            document.getElementById('messages').innerHTML = '';
+            updateMessageCount();
+        });
+
         renderUsers();
+        // attach clear chat button logic
+        document.getElementById('clear-chat').addEventListener('click', () => {
+            if (confirm('Clear all messages?')) {
+                socket.emit('clear chat');
+                document.getElementById('messages').innerHTML = '';
+                updateMessageCount();
+            }
+        });
         // load initial batch of messages then scroll to bottom
         loadMessages().then(() => { messagesContainer.scrollTop = messagesContainer.scrollHeight; });
     </script>
